@@ -1,22 +1,16 @@
-from collections import namedtuple
-from functools import partial
-import hashlib
 import os
-import math
-import h5py
-from PIL import Image
-import torch
-import urllib.request
 from os import path
 import sys
+import hashlib
+from functools import partial
+from collections import namedtuple
+import urllib.request
 import zipfile
-import torch.nn.functional as F
-from torch.utils.data import Dataset, DataLoader
+from PIL import Image
+
+from torch.utils.data import Dataset
 from torchvision import transforms
-import numpy as np
-import kornia
-from kornia import augmentation as K
-from kornia.augmentation import AugmentationSequential
+
 import ssl
 ssl._create_default_https_context = ssl._create_unverified_context
 
@@ -187,7 +181,6 @@ class Sign(namedtuple("Sign", ["visibility", "bbox", "type", "name"])):
 
         return self.area > other.area
 
-
 class STS:
     """The STS class reads the annotations and creates the corresponding
     Sign objects."""
@@ -270,30 +263,27 @@ class TrafficSigns(Dataset):
     CLASSES = ["EMPTY", *LIMITS]
     IMG_SIZE = (1200, 1600)
 
-    def __init__(self, directory, patch_size, patch_stride, task_dict, train=True, seed=0):
-
-        self.patch_size = patch_size
-        self.patch_stride = patch_stride
-        self.task_dict = task_dict
+    def __init__(self, directory, low_size=(320,426), train=True, seed=0):
         
         self._data = self._filter(STS(directory, train, seed))
         
-        transform_list = [
-            transforms.Resize([*self.IMG_SIZE])
+        augm_list = [
+            transforms.Resize((1200,1600))
         ]
 
         if train:
-            transform_list += [
+            augm_list += [
                 transforms.ColorJitter(0.1, 0.1, 0.1, 0.1),
-                transforms.RandomAffine(degrees=0, translate=(100 / self.IMG_SIZE[1], 100 / self.IMG_SIZE[0])),
+                transforms.RandomAffine(degrees=0, translate=(100 / 1200, 100 / 1600)),
             ]
-        
-        transform_list += [
+
+        std_transform_list = [
             transforms.ToTensor(),
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
         ]
-           
-        self.transform = transforms.Compose(transform_list)
+        self.augm = transforms.Compose(augm_list)
+        self.resize = transforms.Resize((self.low_size[0],self.low_size[1]))
+        self.std_transform = transforms.Compose(std_transform_list)
 
     def _filter(self, data):
 
@@ -329,27 +319,20 @@ class TrafficSigns(Dataset):
     def __len__(self):
 
         return len(self._data)
-
+    
     def __getitem__(self, i):
-
-        patch_size = self.patch_size
-        patch_stride = self.patch_stride
 
         img, category = self._data[i]
         img = Image.open(img)
-        img = self.transform(img)
 
-        # Extract patches
-        patches = img.unfold(
-            1, patch_size[0], patch_stride[0]
-        ).unfold(
-            2, patch_size[1], patch_stride[1]
-        ).permute(1, 2, 0, 3, 4)
+        # Increase image size, optionally add simple augmentations
+        img = self.augm(img)
 
-        patches = patches.reshape(-1, *patches.shape[2:])
+        # Create low resolution image
+        img_low = self.resize(img)
 
-        data_dict = {'input': patches}
-        for task in self.task_dict.values():
-            data_dict[task['name']] = category
+        # Apply standard transforms to both image size versions
+        img = self.std_transform(img)
+        img_low = self.std_transform(img_low)
 
-        return data_dict
+        return img, img_low, category
