@@ -120,7 +120,7 @@ class Scorer(nn.Module):
         # Delete the ResNet model as it is not needed anymore
         del resnet
     
-    def forward(self):
+    def forward(self, x):
         # Pass the input through the scorer layers
         x = self.scorer(x)
         

@@ -134,9 +134,9 @@ class EncoderLayer(nn.Module):
         # Create a PositionwiseFeedForward layer
         self.pos_ffn = PositionwiseFeedForward(d_model, d_inner, dropout=dropout)
     
-    def forward(self, x_k, x_v):
+    def forward(self, x):
         # Apply the cross-attention mechanism
-        x = self.crs_attn(x_k, x_v)
+        x = self.crs_attn(x)
         
         # Apply the position-wise feed-forward network
         x = self.pos_ffn(x)
@@ -156,7 +156,7 @@ class Transformer(nn.Module):
     def forward(self, x):
 
         for enc_layer in self.layer_stack:
-            x = enc_layer(x, x)
+            x = enc_layer(x)
 
         return  x
 
