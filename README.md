@@ -2,7 +2,7 @@
 
 # PyTorch implementation of Differentiable Patch Selection
 
-Implementation of DPS from the paper [Differentiable patch selection for image recognition](https://openaccess.thecvf.com/content/CVPR2021/html/Cordonnier_Differentiable_Patch_Selection_for_Image_Recognition_CVPR_2021_paper.html) applied to traffic sign recognition.
+Implementation of DPS [Differentiable patch selection for image recognition](https://openaccess.thecvf.com/content/CVPR2021/html/Cordonnier_Differentiable_Patch_Selection_for_Image_Recognition_CVPR_2021_paper.html) applied to traffic sign recognition.
 
 ## Usage
 Run `main.py` to train a model.
