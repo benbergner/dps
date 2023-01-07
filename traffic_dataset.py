@@ -270,7 +270,7 @@ class TrafficSigns(Dataset):
         self._data = self._filter(STS(directory, train, seed))
         
         augm_list = [
-            transforms.Resize((high_size[0],high_size[1]))
+            transforms.Resize((high_size[0], high_size[1]))
         ]
 
         if train:
@@ -327,13 +327,13 @@ class TrafficSigns(Dataset):
         img, category = self._data[i]
         img = Image.open(img)
 
-        # Increase image size, optionally add simple augmentations
+        # Increase image size, add simple augmentations during training
         img = self.augm(img)
 
         # Create low resolution image
         img_low = self.resize(img)
 
-        # Apply standard transforms to both image size versions
+        # Apply standard transforms to both image versions
         img = self.std_transform(img)
         img_low = self.std_transform(img_low)
 

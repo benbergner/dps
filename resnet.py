@@ -1,5 +1,4 @@
 from typing import Type, Any, Callable, Union, List, Optional
-import sys
 
 import torch
 import torch.nn as nn

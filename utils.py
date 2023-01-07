@@ -45,7 +45,7 @@ def adjust_sigma(n_epoch_warmup, n_epoch, max_sigma, DPS, loader, step):
         # Cosine decay
         q = 0.5 * (1 + math.cos(math.pi * step / max_steps))
         # Calculate the end sigma value
-        end_sigma = 0
+        end_sigma = 1e-5
         # Calculate the current sigma value
         sigma = max_sigma * q + end_sigma * (1 - q)
     # Update sigma in the DPS module

@@ -19,6 +19,7 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 data_dir = 'traffic_dataset'
 num_workers = 16
 n_channel = 3
+n_class = 4
 patch_size = 100
 high_size = (1200, 1600)
 down_factor = 3
@@ -35,10 +36,9 @@ weight_decay = 1e-1
 max_grad_norm = 0.1
 
 # DPS specific
-k = 10
+k = 2
 num_samples = 500
 sigma = 0.05
-n_class = 4
 score_size = (24, 32)
 
 # Transformer specific
@@ -48,8 +48,8 @@ d_model = 512
 n_head = 8
 d_k = 64
 d_v = 64
-d_inner = 2048
-attn_dropout = 0.1
+d_inner = 512
+attn_dropout = 0.
 dropout = 0.1
 
 ###
@@ -77,7 +77,6 @@ optimizer = torch.optim.AdamW(net.parameters(), lr=lr, weight_decay=weight_decay
 for epoch in range(n_epoch):
 
     loss_ls = []
-    loss_entr_ls = []
     correct, total = 0, 0
     
     # Training 

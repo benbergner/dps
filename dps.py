@@ -53,7 +53,6 @@ class PerturbedTopKFunction(torch.autograd.Function):
         ctx.num_samples = num_samples
         ctx.sigma = sigma
 
-        # Save tensors for backward pass
         ctx.perturbed_output = perturbed_output
         ctx.noise = noise
 
@@ -68,14 +67,13 @@ class PerturbedTopKFunction(torch.autograd.Function):
 
         noise_gradient = ctx.noise
         
-        # Calculate expected gradient using perturbed_output and noise_gradient
+        # Calculate expected gradient
         expected_gradient = (
             torch.einsum("bnkd,bne->bkde", ctx.perturbed_output, noise_gradient)
             / ctx.num_samples
             / ctx.sigma
         ) * float(ctx.k)
         
-        # Calculate gradient of input tensor using expected_gradient and grad_output
         grad_input = torch.einsum("bkd,bkde->be", grad_output, expected_gradient)
         
         return (grad_input,) + tuple([None] * 5)

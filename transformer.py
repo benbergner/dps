@@ -18,7 +18,7 @@ class ScaledDotProductAttention(nn.Module):
         attn = torch.matmul(q / self.temperature, k.transpose(2, 3))
         attn = self.dropout(torch.softmax(attn, dim=-1))
         
-        # Calculate the dot product of the attention weights (attn) and v
+        # Calculate the dot product of the attention weights and v
         output = torch.matmul(attn, v)
 
         # Return the attention-weighted output
@@ -37,7 +37,7 @@ class MultiHeadCrossAttention(nn.Module):
         self.d_k = d_k
         self.d_v = d_v
         
-        # Create the query token and initialize using the uniform initialization method
+        # Create the query token and apply uniform initialization
         self.q = nn.Parameter(torch.empty((1, n_token, d_model)))
         q_init_val = math.sqrt(1 / d_k)
         nn.init.uniform_(self.q, a=-q_init_val, b=q_init_val)
@@ -142,23 +142,6 @@ class EncoderLayer(nn.Module):
         x = self.pos_ffn(x)
 
         return x
-
-class Transformer(nn.Module):
-    """ Transformer architecture """
-
-    def __init__(self, n_layer, n_token, n_head, d_k, d_v, d_model, d_inner, attn_dropout=0.1, dropout=0.1):
-        super().__init__()
-
-        self.layer_stack = nn.ModuleList([
-            EncoderLayer(n_token[i], d_model, d_inner, n_head, d_k, d_v, attn_dropout=attn_dropout, dropout=dropout)
-            for i in range(n_layer)])
-    
-    def forward(self, x):
-
-        for enc_layer in self.layer_stack:
-            x = enc_layer(x)
-
-        return  x
 
 
 class Transformer(nn.Module):
