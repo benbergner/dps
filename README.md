@@ -10,9 +10,9 @@ All configs can set in this file as well.
 
 ## Further notes
 
-This implementation was used as baseline in [Iterative Patch Selection for High-Resolution Image Recognition](https://arxiv.org/abs/2210.13007) and uses a simplified pre-trained ResNet as scorer network, as well as a ResNet-18 as feature network.
+This implementation was used as baseline in [Iterative Patch Selection for High-Resolution Image Recognition](https://arxiv.org/abs/2210.13007) and uses a simplified pre-trained ResNet as scorer network, as well as a pre-trained ResNet-18 as feature network. For patch aggregation, a cross-attention transformer module is used.
 
-More details can be found in the appendix.
+Hyperparameter details can be found the appendix.
 
 ## Citations
 ```bibtex
