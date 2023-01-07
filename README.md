@@ -6,7 +6,7 @@ Implementation of DPS [Differentiable patch selection for image recognition](htt
 
 ## Usage
 Run `main.py` to train a model.
-All configs can set in this file as well.
+All configs can be set in this file as well.
 
 ## Further notes
 
