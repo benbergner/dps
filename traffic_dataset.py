@@ -261,20 +261,22 @@ class TrafficSigns(Dataset):
 
     LIMITS = ["50_SIGN", "70_SIGN", "80_SIGN"]
     CLASSES = ["EMPTY", *LIMITS]
-    IMG_SIZE = (1200, 1600)
 
-    def __init__(self, directory, low_size=(320,426), train=True, seed=0):
+    def __init__(self, directory, high_size, low_size, train=True, seed=0):
         
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+
         self._data = self._filter(STS(directory, train, seed))
         
         augm_list = [
-            transforms.Resize((1200,1600))
+            transforms.Resize((high_size[0],high_size[1]))
         ]
 
         if train:
             augm_list += [
                 transforms.ColorJitter(0.1, 0.1, 0.1, 0.1),
-                transforms.RandomAffine(degrees=0, translate=(100 / 1200, 100 / 1600)),
+                transforms.RandomAffine(degrees=0, translate=(100 / high_size[0], 100 / high_size[1])),
             ]
 
         std_transform_list = [

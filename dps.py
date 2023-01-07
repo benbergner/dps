@@ -6,18 +6,6 @@ from transformer import Transformer
 
 
 class PerturbedTopK(nn.Module):
-    def __init__(self, k: int, num_samples: int = 500, sigma: float = 0.05):
-        super(PerturbedTopK, self).__init__()
-    
-        self.num_samples = num_samples
-        self.sigma = sigma
-        self.k = k
-
-    def __call__(self, x):
-        return PerturbedTopKFunction.apply(x, self.k, self.num_samples, self.sigma)
-
-
-class PerturbedTopK(nn.Module):
 
     def __init__(self, k: int, num_samples: int = 500, sigma: float = 0.05):
         super(PerturbedTopK, self).__init__()
@@ -97,7 +85,6 @@ class Scorer(nn.Module):
     ''' Scorer network '''
 
     def __init__(self, n_channel):
-        # Initialize the base class
         super().__init__()    
         
         # Create a ResNet-18 model with 3 channels and pretrained weights
@@ -123,28 +110,23 @@ class Scorer(nn.Module):
     def forward(self, x):
         # Pass the input through the scorer layers
         x = self.scorer(x)
-        
-        # Squeeze the channel dimension
-        x = x.squeeze(1)
-        
-        # Return the scored input
-        return x
+        return x.squeeze(1)
 
 
 class DPS(nn.Module):
     ''' Differentiable Patch Selection '''
 
-    def __init__(self, n_class, n_channel, k, patch_size, n_layer, n_token,
-        n_head, d_k, d_v, d_model, d_inner, dropout, attn_dropout, device):
+    def __init__(self, n_class, n_channel, high_size, score_size, k, num_samples, sigma, patch_size,
+        n_layer, n_token, n_head, d_k, d_v, d_model, d_inner, dropout, attn_dropout, device):
         super().__init__()
-
+        
         self.patch_size = patch_size
         self.k = k
         self.device = device
 
         self.scorer = Scorer(n_channel)
 
-        self.TOPK = PerturbedTopK(k=k)
+        self.TOPK = PerturbedTopK(k, num_samples, sigma)
         self.feature_net = resnet18(num_channels=n_channel, pretrained=True, flatten=True)
 
         self.transformer = Transformer(n_layer, n_token, n_head, d_k, d_v, d_model, d_inner, attn_dropout, dropout)
@@ -153,57 +135,59 @@ class DPS(nn.Module):
             nn.Linear(d_model, n_class),
             nn.Softmax(dim = -1)
         )
+
+        # Compute padding once since all images have the same size
+        h, w = high_size
+        self.h_score, self.w_score = score_size
+
+        self.scale_h = h // self.h_score
+        self.scale_w = w // self.w_score
+        padded_h = self.scale_h * self.h_score + patch_size - 1
+        padded_w = self.scale_w * self.w_score + patch_size - 1
+        top_pad = (patch_size - self.scale_h) // 2
+        left_pad = (patch_size - self.scale_w) // 2
+        bottom_pad = padded_h - top_pad - h
+        right_pad = padded_w - left_pad - w
+
+        self.padding = (left_pad, right_pad, top_pad, bottom_pad)
     
     def forward(self, x_high, x_low):
         
-        b, c, h_orig, w_orig = x_high.shape
+        b, c = x_high.shape[:2]
         patch_size = self.patch_size
         device = self.device
 
         ### Score patches to get indicators
         scores_2d = self.scorer(x_low)
-        b, h_score, w_score = scores_2d.shape
         scores_1d = scores_2d.view(b, -1)
-
-        # entropy
-        prob_scores = torch.softmax(scores_1d, dim=-1)
-        entr = torch.special.entr(prob_scores).sum(-1).mean(0)
 
         # 0 -1 normalization
         scores_min = scores_1d.min(axis=-1, keepdims=True)[0]
         scores_max = scores_1d.max(axis=-1, keepdims=True)[0]
         scores_1d =  (scores_1d - scores_min) / (scores_max - scores_min + 1e-5)
 
-        indicators = self.TOPK(scores_1d).view(b, self.k, h_score, w_score)
+        indicators = self.TOPK(scores_1d).view(b, self.k, self.h_score, self.w_score)
     
-        ### Extract patches
         # Pad image      
-        scale_h = h_orig // h_score
-        scale_w = w_orig // w_score
-        padded_h = scale_h * h_score + patch_size - 1
-        padded_w = scale_w * w_score + patch_size - 1
-        top_pad = (patch_size - scale_h) // 2
-        left_pad = (patch_size - scale_w) // 2
-        bottom_pad = padded_h - top_pad - h_orig
-        right_pad = padded_w - left_pad - w_orig
+        x_high_pad = torch.nn.functional.pad(x_high, self.padding, "constant", 0)
 
-        padding = (left_pad, right_pad, top_pad, bottom_pad)
-        x_high_pad = torch.nn.functional.pad(x_high, padding, "constant", 0)
-
+        # Extract patches
         patches = torch.zeros((b, self.k, c, patch_size, patch_size)).to(device)
-        for i in range(h_score):
-            for j in range(w_score):
-                start_h = i*scale_h
-                start_w = j*scale_w
+        for i in range(self.h_score):
+            for j in range(self.w_score):
+                start_h = i*self.scale_h
+                start_w = j*self.scale_w
 
-                current_patches = x_high_pad[:, :, start_h : start_h + patch_size , start_w : start_w + patch_size] #(b, c, patch_size, patch_size)
-                weight = indicators[:, :, i, j] #b, k
+                # (b, c, patch_size, patch_size)
+                current_patches = x_high_pad[:, :, start_h : start_h + patch_size , start_w : start_w + patch_size] 
+                weight = indicators[:, :, i, j] # b, k
 
-                patches += torch.einsum('bchw,bk->bkchw', current_patches, weight) #broacast, element-wise mult.
+                # Broacast, element-wise mult.
+                patches += torch.einsum('bchw,bk->bkchw', current_patches, weight) 
         
-        ### Extract features, aggregate, predict
+        # Compute features, aggregate and predict
         features = self.feature_net(patches.view(-1, c, self.patch_size, self.patch_size)).view(b, self.k, -1)
         features = self.transformer(features)
         pred = self.head(features).view(b, -1)
 
-        return pred, entr
+        return pred

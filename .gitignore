@@ -130,3 +130,5 @@ dmypy.json
 
 # custom ignores
 main.slurm
+traffic_dataset/
+logs/
