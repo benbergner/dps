@@ -134,8 +134,8 @@ class Scorer(nn.Module):
 class DPS(nn.Module):
     ''' Differentiable Patch Selection '''
 
-    def __init__(self, task, n_class, n_channel, k, patch_size, n_layer, n_token, n_head,
-        d_k, d_v, d_model, d_inner, dropout, attn_dropout, device, use_pretrained=True, use_pos_enc=False):
+    def __init__(self, n_class, n_channel, k, patch_size, n_layer, n_token,
+        n_head, d_k, d_v, d_model, d_inner, dropout, attn_dropout, device):
         super().__init__()
 
         self.patch_size = patch_size
@@ -145,7 +145,7 @@ class DPS(nn.Module):
         self.scorer = Scorer(n_channel)
 
         self.TOPK = PerturbedTopK(k=k)
-        self.feature_net = resnet18(num_channels=n_channel, pretrained=use_pretrained, flatten=True)
+        self.feature_net = resnet18(num_channels=n_channel, pretrained=True, flatten=True)
 
         self.transformer = Transformer(n_layer, n_token, n_head, d_k, d_v, d_model, d_inner, attn_dropout, dropout)
         

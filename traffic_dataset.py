@@ -282,7 +282,7 @@ class TrafficSigns(Dataset):
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
         ]
         self.augm = transforms.Compose(augm_list)
-        self.resize = transforms.Resize((self.low_size[0],self.low_size[1]))
+        self.resize = transforms.Resize((low_size[0],low_size[1]))
         self.std_transform = transforms.Compose(std_transform_list)
 
     def _filter(self, data):
